@@ -94,6 +94,19 @@
       min-width: 200px;
     }
 
+    .control select {
+      background: transparent;
+      border: none;
+      color: inherit;
+      outline: none;
+      font-size: 14px;
+      min-width: 130px;
+    }
+
+    .control select option {
+      color: #0f172a;
+    }
+
     .control button {
       background: var(--accent-1);
       border: none;
@@ -252,6 +265,14 @@
         <span>Search</span>
         <input id="search" type="search" placeholder="Name, email, org number" />
       </label>
+      <label class="control">
+        <span>Status</span>
+        <select id="status-filter">
+          <option value="all">Alle</option>
+          <option value="active">Aktive</option>
+          <option value="disabled">Deaktiverte</option>
+        </select>
+      </label>
       <div class="control">
         <span id="last-refresh">Not loaded</span>
         <button id="refresh">Refresh</button>
@@ -268,8 +289,10 @@
     const summary = document.getElementById("summary");
     const state = document.getElementById("state");
     const search = document.getElementById("search");
+    const statusFilter = document.getElementById("status-filter");
     const refresh = document.getElementById("refresh");
     const lastRefresh = document.getElementById("last-refresh");
+    let allCustomers = [];
 
     const formatDate = (value) => {
       if (!value) return "-";
@@ -329,6 +352,10 @@
             <span class="pill">Last login: ${formatDate(customer.lastLoginUtc)}</span>
             <span class="pill">Last sync: ${formatDate(customer.lastSyncEndUtc)}</span>
             <span class="pill">Sync status: ${customer.lastSyncStatus ?? "-"}</span>
+            <span class="pill">Deleted: ${customer.isDeleted}</span>
+            <span class="pill">Disabled: ${customer.isDisabled}</span>
+            <span class="pill">Company status: ${customer.registrationStatus ?? "-"}</span>
+            <span class="pill">Active: ${customer.isActive ?? "-"}</span>
           </div>
           <div class="meta">
             <span>Primary: ${customer.primaryUserName ?? "-"}</span>
@@ -344,6 +371,7 @@
                         <div class="user">
                           <strong>${user.fullName ?? "Unnamed"}</strong><br />
                           <span>${user.email ?? "-"}</span><br />
+                          <span>Roles: ${(Array.isArray(user.roles) && user.roles.length) ? user.roles.join(", ") : "-"}</span><br />
                           <span>Last login: ${formatDate(user.lastLoginUtc)}</span>
                         </div>
                       `
@@ -356,6 +384,26 @@
 
         grid.appendChild(card);
       });
+    };
+
+    const applyFilters = () => {
+      const term = search.value.trim().toLowerCase();
+      const selectedStatus = statusFilter.value;
+
+      const filteredCustomers = allCustomers.filter((customer) => {
+        const textMatch = !term || JSON.stringify(customer).toLowerCase().includes(term);
+
+        let statusMatch = true;
+        if (selectedStatus === "active") {
+          statusMatch = customer.isDisabled !== true;
+        } else if (selectedStatus === "disabled") {
+          statusMatch = customer.isDisabled === true;
+        }
+
+        return textMatch && statusMatch;
+      });
+
+      renderCustomers(filteredCustomers);
     };
 
     const load = async () => {
@@ -377,8 +425,9 @@
           customersResponse.json()
         ]);
 
+        allCustomers = customersData;
         renderSummary(summaryData);
-        renderCustomers(customersData);
+        applyFilters();
         lastRefresh.textContent = `Updated ${new Date().toLocaleTimeString()}`;
       } catch (error) {
         state.hidden = false;
@@ -386,17 +435,8 @@
       }
     };
 
-    const filterCustomers = (query) => {
-      const term = query.trim().toLowerCase();
-      const cards = Array.from(grid.children);
-
-      cards.forEach((card) => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(term) ? "flex" : "none";
-      });
-    };
-
-    search.addEventListener("input", (event) => filterCustomers(event.target.value));
+    search.addEventListener("input", applyFilters);
+    statusFilter.addEventListener("change", applyFilters);
     refresh.addEventListener("click", load);
 
     load();

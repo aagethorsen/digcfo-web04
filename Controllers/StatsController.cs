@@ -26,4 +26,25 @@ public class StatsController : ControllerBase
         var customers = await _repository.GetCustomersAsync(cancellationToken);
         return Ok(customers);
     }
+
+    [HttpGet("customers/lookup")]
+    public async Task<ActionResult<OrganizationLookupResult>> LookupOrganization([FromQuery] long orgNumber, CancellationToken cancellationToken)
+    {
+        var result = await _repository.GetOrganizationLookupAsync(orgNumber, cancellationToken);
+        if (result is null)
+        {
+            return NotFound(new { orgNumber, message = "Organization number not found in Registration_Account." });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("customers/deleted-flags")]
+    public async Task<ActionResult<IReadOnlyList<DeletedCustomerFlagSummary>>> GetDeletedCustomerFlags(
+        [FromQuery] string namePrefix = "XXXX",
+        CancellationToken cancellationToken = default)
+    {
+        var results = await _repository.GetDeletedCustomerFlagSummariesAsync(namePrefix, cancellationToken);
+        return Ok(results);
+    }
 }
