@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DigCfoWebApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ece17ef6fa575cb1a96ad96c351c7b23fe40341e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f8349ddec2506b707d31cf7381fa3626fa01c153")]
 [assembly: System.Reflection.AssemblyProductAttribute("DigCfoWebApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DigCfoWebApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
