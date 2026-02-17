@@ -1,0 +1,53 @@
+name: Deploy API to Azure App Service
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore ./DigCfoWebApi.csproj
+
+      - name: Publish
+        run: dotnet publish ./DigCfoWebApi.csproj -c Release -o ./publish
+
+      - name: Zip artifact
+        run: |
+          cd publish
+          zip -r ../deploy.zip .
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set production app settings
+        run: |
+          az webapp config appsettings set \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ secrets.AZURE_WEBAPP_NAME }}" \
+            --settings \
+              ASPNETCORE_ENVIRONMENT=Production \
+              ConnectionStrings__StatsDb="${{ secrets.STATSDB_CONNECTIONSTRING }}"
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          package: ./deploy.zip

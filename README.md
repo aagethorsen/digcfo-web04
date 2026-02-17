@@ -79,3 +79,54 @@ Invoke-RestMethod https://digcfo-webapi-prod.azurewebsites.net/stats/customers
 
 - Prefer storing secrets in Azure Key Vault and use Key Vault references in App Service for production.
 - Avoid committing real connection strings/passwords in `appsettings.json`.
+
+## GitHub Actions (auto deploy)
+
+Workflow is included in `.github/workflows/deploy-azure-webapp.yml`.
+
+### Required GitHub Secrets
+- `AZURE_CREDENTIALS` (service principal JSON for `azure/login`)
+- `AZURE_RESOURCE_GROUP` (for example `rg-digcfo-prod`)
+- `AZURE_WEBAPP_NAME` (for example `digcfo-webapi-prod`)
+- `STATSDB_CONNECTIONSTRING` (full SQL connection string)
+
+### How it works
+- Triggers on push to `main` (and manual run via `workflow_dispatch`)
+- Builds and publishes `DigCfoWebApi.csproj`
+- Sets App Service settings (`ASPNETCORE_ENVIRONMENT`, `ConnectionStrings__StatsDb`)
+- Deploys ZIP package to Azure Web App
+
+## Manual + CI/CD together
+- Use `scripts/Deploy-AzureAppService.ps1` and `scripts/Set-AzureSqlFirewallForWebApp.ps1` for first-time setup.
+- Use GitHub Actions workflow for continuous deploy after setup.
+
+## Mest mulig automatisert oppsett (én kommando)
+
+For å automatisere oppsett av service principal + GitHub Secrets, bruk scriptet under:
+
+```powershell
+./scripts/Setup-GitHubActionsAzureDeploy.ps1 \
+	-ResourceGroup "<resource-group>" \
+	-WebAppName "<webapp-name>" \
+	-StatsDbConnectionString "Server=tcp:...;Initial Catalog=...;User ID=...;Password=...;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;" \
+	-TriggerWorkflow
+```
+
+Du kan også kjøre kun:
+
+```powershell
+./scripts/Setup-GitHubActionsAzureDeploy.ps1 -TriggerWorkflow
+```
+
+Da forsøker scriptet å auto-finne subscription og GitHub repo, og spør bare om manglende verdier.
+
+Scriptet gjør dette:
+- Logger inn i Azure CLI (`az`) og GitHub CLI (`gh`) ved behov.
+- Oppretter service principal med Contributor på Resource Group-scope.
+- Setter GitHub Secrets: `AZURE_CREDENTIALS`, `AZURE_RESOURCE_GROUP`, `AZURE_WEBAPP_NAME`, `STATSDB_CONNECTIONSTRING`.
+- Trigger workflowen `Deploy API to Azure App Service` hvis `-TriggerWorkflow` er med.
+
+Krav:
+- `az` og `gh` installert.
+- `gh auth login` må ha tilgang til repoet.
+- Bruker må ha rettigheter til å opprette service principal i Azure AD og rolle-tildeling på subscription/resource group.
